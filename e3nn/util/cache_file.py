@@ -1,12 +1,13 @@
 '''
 Cache in files
 '''
-import fcntl
+#import fcntl
 import glob
 import gzip
 import os
 import pickle
 import sys
+from random import randrange
 from functools import lru_cache, wraps
 from itertools import chain, count
 
@@ -48,7 +49,7 @@ class FileSystemMutex:
 
 
 def cached_picklesjar(dirname, maxsize=128, open_jar=gzip.open,
-                      load=pickle.load, save=pickle.dump, ext='pickle'):
+                      load=pickle.load, save=pickle.dump, ext='pickle', temp_ext='temp'):
     '''
     Cache a function with a directory
 
@@ -77,40 +78,45 @@ def cached_picklesjar(dirname, maxsize=128, open_jar=gzip.open,
             if not os.access(dirname, os.W_OK):
                 return func(*args, **kwargs)
 
-            mutexfile = os.path.join(dirname, "mutex")
+            #mutexfile = os.path.join(dirname, "mutex")
 
             key = (args, frozenset(kwargs.items()), func.__defaults__)
 
-            with FileSystemMutex(mutexfile):
-                for file in glob.glob(os.path.join(dirname, "*.{}".format(ext))):
-                    with open_jar(file, "rb") as file:
-                        loadedkey = load(file)
-                        if key == loadedkey:
-                            return load(file)
+            #with FileSystemMutex(mutexfile):
+            # why do we try all the files? could we just rely on the naming convention?
+            for file in glob.glob(os.path.join(dirname, "*.{}".format(ext))):
+                with open_jar(file, "rb") as file:
+                    loadedkey = load(file)
+                    if key == loadedkey:
+                        return load(file)
 
             sys.stdout.flush()
             result = func(*args, **kwargs)
             sys.stdout.flush()
 
-            with FileSystemMutex(mutexfile):
-                name = " ".join(map(str, args))
-                if kwargs:
-                    name += " " + " ".join(
-                        "{}={}".format(key, value)
-                        for key, value in sorted(kwargs.items())
-                    )
+            #with FileSystemMutex(mutexfile):
+            name = " ".join(map(str, args))
+            if kwargs:
+                name += " " + " ".join(
+                    "{}={}".format(key, value)
+                    for key, value in sorted(kwargs.items())
+                )
+            #for postfix in chain([''], ('_{}'.format(i) for i in count())):
+            #    file = os.path.join(dirname, "{}{}.{}".format(name, postfix, ext))
+            #    if not os.path.isfile(file):
+            #        break
+            file = os.path.join(dirname, "{}{}.{}".format(name, ext))  
+                
+            temp_name = '{:X}'.format(randrange(16 ** 8))
+            temp_file = os.path.join(dirname, "{}.{}".format(temp_name, temp_ext))
 
-                for postfix in chain([''], ('_{}'.format(i) for i in count())):
-                    file = os.path.join(dirname, "{}{}.{}".format(name, postfix, ext))
-                    if not os.path.isfile(file):
-                        break
-
-                try:
-                    with open_jar(file, "wb") as file:
-                        save(key, file)
-                        save(result, file)
-                except PermissionError:
-                    pass
+            try:
+                with open_jar(temp_file, "wb") as temp_file:
+                    save(key, temp_file)
+                    save(result, temp_file)
+                os.replace(temp_file, file)
+            except PermissionError:
+                pass
 
             return result
 
