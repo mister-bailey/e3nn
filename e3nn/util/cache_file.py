@@ -84,8 +84,8 @@ def cached_picklesjar(dirname, maxsize=128, open_jar=gzip.open,
 
             #with FileSystemMutex(mutexfile):
             # why do we try all the files? could we just rely on the naming convention?
-            for file in glob.glob(os.path.join(dirname, "*.{}".format(ext))):
-                with open_jar(file, "rb") as file:
+            for filename in glob.glob(os.path.join(dirname, "*.{}".format(ext))):
+                with open_jar(filename, "rb") as file:
                     loadedkey = load(file)
                     if key == loadedkey:
                         return load(file)
@@ -105,15 +105,15 @@ def cached_picklesjar(dirname, maxsize=128, open_jar=gzip.open,
             #    file = os.path.join(dirname, "{}{}.{}".format(name, postfix, ext))
             #    if not os.path.isfile(file):
             #        break
-            file = os.path.join(dirname, "{}{}.{}".format(name, ext))  
+            file = os.path.join(dirname, "{}.{}".format(name, ext))  
                 
             temp_name = '{:X}'.format(randrange(16 ** 8))
             temp_file = os.path.join(dirname, "{}.{}".format(temp_name, temp_ext))
 
             try:
-                with open_jar(temp_file, "wb") as temp_file:
-                    save(key, temp_file)
-                    save(result, temp_file)
+                with open_jar(temp_file, "wb") as t_file:
+                    save(key, t_file)
+                    save(result, t_file)
                 os.replace(temp_file, file)
             except PermissionError:
                 pass
