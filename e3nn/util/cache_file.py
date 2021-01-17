@@ -105,16 +105,16 @@ def cached_picklesjar(dirname, maxsize=128, open_jar=gzip.open,
             #    file = os.path.join(dirname, "{}{}.{}".format(name, postfix, ext))
             #    if not os.path.isfile(file):
             #        break
-            file = os.path.join(dirname, "{}{}.{}".format(name, ext))  
+            file = os.path.join(dirname, "{}.{}".format(name, ext))  
                 
             temp_name = '{:X}'.format(randrange(16 ** 8))
-            temp_file = os.path.join(dirname, "{}.{}".format(temp_name, temp_ext))
+            temp_filename = os.path.join(dirname, "{}.{}".format(temp_name, temp_ext))
 
             try:
-                with open_jar(temp_file, "wb") as temp_file:
+                with open_jar(temp_filename, "wb") as temp_file:
                     save(key, temp_file)
                     save(result, temp_file)
-                os.replace(temp_file, file)
+                os.replace(temp_filename, file)
             except PermissionError:
                 pass
 
